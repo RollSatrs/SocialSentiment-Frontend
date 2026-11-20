@@ -31,6 +31,7 @@ export default function Home() {
   const [history, setHistory] = useState<Analysis[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -42,9 +43,10 @@ export default function Home() {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true); setError(""); setResult(null);
+    setLoading(true); setProgressStep(1); setError(""); setResult(null);
     try {
       const comments = raw.split("\n").map((line) => line.trim()).filter(Boolean);
+      setProgressStep(2);
       const response = await fetch(`${API}/api/v1/analyses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,11 +54,12 @@ export default function Home() {
       });
       const data: Analysis & { message?: string } = await response.json();
       if (!response.ok) throw new Error(data.message ?? "Ошибка обработки запроса");
+      setProgressStep(3);
       setResult(data); setFilter("all");
       setHistory((previous) => data.id ? [data, ...previous.filter((item) => item.id !== data.id)].slice(0, 20) : previous);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не удалось подключиться к Java API на порту 4001.");
-    } finally { setLoading(false); }
+    } finally { setLoading(false); setProgressStep(0); }
   }
 
   const shown = result?.comments.filter((comment) => filter === "all" || comment.sentiment === filter) ?? [];
@@ -91,6 +94,23 @@ export default function Home() {
             <textarea id="comments" rows={6} value={raw} onChange={(e) => setRaw(e.target.value)} placeholder={"Ужасное качество, очень плохо\nОтлично, спасибо!\nКогда будет новая публикация?"} className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-[#0c0f18] px-4 py-3.5 text-sm leading-7 outline-none focus:border-violet-400" />
             <p className="mt-3 text-xs leading-5 text-amber-200/75">Автоматический сбор Instagram пока не подключён. Без вставленных комментариев система не будет выдумывать результаты. Классификация сейчас словарная, не AI.</p>
             <button disabled={loading} className="mt-6 w-full rounded-xl bg-violet-500 px-5 py-3.5 font-semibold transition hover:bg-violet-400 disabled:opacity-50">{loading ? "Анализируем..." : "Анализировать комментарии"}</button>
+            {loading && <div role="status" aria-live="polite" className="mt-5 rounded-2xl border border-violet-400/25 bg-violet-400/5 p-5">
+              <div className="flex items-center gap-3">
+                <span className="inline-block size-5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-300" />
+                <p className="text-sm font-semibold text-violet-200">Выполняется анализ...</p>
+              </div>
+              <div className="mt-4 space-y-3">
+                {[
+                  "Проверяем ссылку Instagram",
+                  "Отправляем запрос на Java API",
+                  "Получаем результат классификации",
+                ].map((step, index) => <div key={step} className={`flex items-center gap-3 text-sm ${progressStep >= index + 1 ? "text-white" : "text-zinc-500"}`}>
+                  <span className={`grid size-6 shrink-0 place-items-center rounded-full text-xs ${progressStep > index + 1 ? "bg-emerald-500/20 text-emerald-300" : progressStep === index + 1 ? "bg-violet-500 text-white animate-pulse" : "bg-white/10"}`}>{progressStep > index + 1 ? "✓" : index + 1}</span>
+                  <span>{step}</span>
+                </div>)}
+              </div>
+              <p className="mt-4 text-xs text-zinc-400">Ожидаем ответ сервера. Автоматическое скачивание комментариев пока не подключено.</p>
+            </div>}
             {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200">{error}</div>}
           </form>
           <aside className="rounded-3xl border border-white/10 bg-[#151925] p-6 sm:p-8">
