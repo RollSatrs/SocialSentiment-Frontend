@@ -36,7 +36,7 @@ export default function Home() {
   useEffect(() => {
     fetch(`${API}/api/v1/analyses`)
       .then((response) => response.ok ? response.json() : [])
-      .then((data: Analysis[]) => setHistory(data))
+      .then((data: Analysis[]) => setHistory(Array.isArray(data) ? data.filter((item) => item && typeof item.id === "string" && item.id.length > 0).filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index) : []))
       .catch(() => {});
   }, []);
 
@@ -53,7 +53,7 @@ export default function Home() {
       const data: Analysis & { message?: string } = await response.json();
       if (!response.ok) throw new Error(data.message ?? "Ошибка обработки запроса");
       setResult(data); setFilter("all");
-      setHistory((previous) => [data, ...previous.filter((item) => item.id !== data.id)].slice(0, 20));
+      setHistory((previous) => data.id ? [data, ...previous.filter((item) => item.id !== data.id)].slice(0, 20) : previous);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не удалось подключиться к Java API на порту 4001.");
     } finally { setLoading(false); }
@@ -98,7 +98,7 @@ export default function Home() {
             <p className="mt-1 text-sm text-zinc-500">Последние 20 запусков из PostgreSQL</p>
             <div className="mt-6 space-y-3">
               {history.length === 0 && <p className="text-sm text-zinc-500">Пока нет сохранённых анализов.</p>}
-              {history.map((item) => <button key={item.id} onClick={() => { setResult(item); setFilter("all"); }} className="w-full rounded-xl border border-white/10 bg-[#0d101a] p-4 text-left transition hover:border-violet-400/50">
+              {history.map((item, index) => <button key={`${item.id}-${index}`} onClick={() => { setResult(item); setFilter("all"); }} className="w-full rounded-xl border border-white/10 bg-[#0d101a] p-4 text-left transition hover:border-violet-400/50">
                 <p className="truncate text-sm font-medium">{item.url}</p>
                 <p className="mt-2 text-xs text-zinc-500">{item.total} комментариев · {item.negative} негативных · {new Date(item.createdAt).toLocaleString("ru-RU")}</p>
               </button>)}
