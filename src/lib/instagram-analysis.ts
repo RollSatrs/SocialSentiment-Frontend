@@ -5,7 +5,7 @@ export type AnalysisResponse = {
 };
 
 export async function requestInstagramAnalysis(url: string): Promise<AnalysisResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
   const response = await fetch(`${baseUrl}/api/v1/analyses`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
