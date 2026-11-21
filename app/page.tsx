@@ -13,6 +13,36 @@ const tones: { key: Tone; label: string; color: string; text: string }[] = [
   { key: "positive", label: "Позитивные", color: "#34d399", text: "text-emerald-300" },
 ];
 const sourceName = (source: string) => ({ scrapfly: "Instagram · Scrapfly", instagram_api: "Instagram API", user_supplied: "Ручной ввод", reanalyzed_ai: "Повторный анализ" }[source] ?? source);
+const loadingMessages = {
+  scrapfly: ["Проверяем публикацию...", "Получаем комментарии...", "Обрабатываем данные...", "Анализируем реакции...", "Подготавливаем отчёт..."],
+  manual: ["Проверяем комментарии...", "Обрабатываем данные...", "Анализируем реакции...", "Подготавливаем отчёт..."],
+  repeat: ["Подготавливаем комментарии...", "Анализируем реакции...", "Сохраняем результаты..."],
+} as const;
+
+function LoadingMessage({ messages }: { messages: readonly string[] }) {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    setIndex(0);
+    setVisible(true);
+    const interval = window.setInterval(() => {
+      setVisible(false);
+      window.setTimeout(() => {
+        setIndex(previous => Math.min(previous + 1, messages.length - 1));
+        setVisible(true);
+      }, 850);
+    }, 3500);
+    return () => window.clearInterval(interval);
+  }, [messages]);
+  return (
+    <span className="relative block h-5 overflow-hidden text-center" role="status" aria-live="off">
+      <span className={`block transition-all duration-[850ms] ease-in-out motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"}`}>
+        {messages[index]}
+      </span>
+    </span>
+  );
+}
+
 const pct = (n: number, total: number) => total ? Math.round(n / total * 1000) / 10 : 0;
 function validHistory(data: unknown): Analysis[] {
   if (!Array.isArray(data)) return [];
@@ -113,8 +143,8 @@ export default function Home() {
                 <button type="button" onClick={() => setMode("manual")} className={`rounded-lg px-3 py-3 text-sm transition ${mode === "manual" ? "bg-[#29233f] text-violet-200 shadow-sm" : "text-slate-500 hover:text-white"}`}>Вставить комментарии</button>
               </div>
               {mode === "manual" ? <><label htmlFor="manual-comments" className="mt-5 block text-xs font-medium text-slate-300">Комментарии · по одному на строку</label><textarea id="manual-comments" rows={5} value={raw} onChange={e => setRaw(e.target.value)} placeholder={"Отличный пост!\nМне совсем не понравилось\nКогда будет продолжение?"} className="field mt-2 resize-y leading-7" /><p className="mt-2 text-xs text-slate-500">До 500 комментариев за один анализ.</p></> : <div className="mt-5 rounded-xl border border-violet-400/10 bg-violet-400/[.04] p-4 text-xs leading-6 text-slate-400">Сбор публичных комментариев через Scrapfly. Для работы требуется запущенный Python parser и настроенный ключ Scrapfly. Запрос может расходовать кредиты.</div>}
-              <button disabled={loading} type="submit" className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-900/20 transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60">{loading ? "Собираем и анализируем комментарии…" : "Анализировать комментарии →"}</button>
-              {loading && <p role="status" className="mt-3 text-center text-xs text-violet-300">Обработка может занять некоторое время, особенно при первом запуске модели.</p>}
+              <button disabled={loading} type="submit" className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-900/20 transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60">{loading ? <LoadingMessage messages={loadingMessages[mode]} /> : "Анализировать комментарии →"}</button>
+              {loading && <p className="mt-3 text-center text-xs text-slate-500">Пожалуйста, подождите. Этапы отображаются ориентировочно.</p>}
               {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-200">{error}</div>}
             </form>
             <aside className="panel p-6 sm:p-7"><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">История анализов</h2><p className="mt-1 text-xs text-slate-500">Последние сохранённые результаты</p></div><button type="button" onClick={() => void refresh()} aria-label="Обновить историю" className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5">↻</button></div>
@@ -124,7 +154,7 @@ export default function Home() {
             </aside>
           </div>
           {result ? <section className="mt-7 space-y-5" aria-label="Результаты анализа">
-            <div className="panel p-6 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-violet-400">Отчёт по публикации</p><h2 className="mt-2 text-2xl font-semibold">Результаты анализа</h2><p className="mt-2 max-w-xl break-all text-xs text-slate-500">{result.url}</p><p className="mt-2 text-xs text-slate-400">{sourceName(result.source)} · {new Date(result.createdAt).toLocaleString("ru-RU")}</p></div><button type="button" onClick={() => void reanalyze()} disabled={reanalyzing || !result.total} className="rounded-xl border border-violet-400/25 bg-violet-400/10 px-4 py-2.5 text-xs font-medium text-violet-200 hover:bg-violet-400/20 disabled:opacity-50">{reanalyzing ? "Повторный анализ…" : "↻ Повторить анализ"}</button></div>
+            <div className="panel p-6 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-violet-400">Отчёт по публикации</p><h2 className="mt-2 text-2xl font-semibold">Результаты анализа</h2><p className="mt-2 max-w-xl break-all text-xs text-slate-500">{result.url}</p><p className="mt-2 text-xs text-slate-400">{sourceName(result.source)} · {new Date(result.createdAt).toLocaleString("ru-RU")}</p></div><button type="button" onClick={() => void reanalyze()} disabled={reanalyzing || !result.total} className="rounded-xl border border-violet-400/25 bg-violet-400/10 px-4 py-2.5 text-xs font-medium text-violet-200 hover:bg-violet-400/20 disabled:opacity-50">{reanalyzing ? <LoadingMessage messages={loadingMessages.repeat} /> : "↻ Повторить анализ"}</button></div>
               <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">{[{ label: "Всего комментариев", value: result.total, cls: "text-white" }, { label: "Негативные", value: result.negative, cls: "text-rose-300" }, { label: "Нейтральные", value: result.neutral, cls: "text-slate-300" }, { label: "Позитивные", value: result.positive, cls: "text-emerald-300" }].map(x => <div key={x.label} className="rounded-2xl border border-white/[.07] bg-[#0d101b] p-4 sm:p-5"><p className="text-xs text-slate-500">{x.label}</p><p className={`mt-3 text-3xl font-semibold tabular-nums ${x.cls}`}>{x.value}</p></div>)}</div>
               <div className="mt-6 grid items-center gap-8 rounded-2xl border border-white/[.06] bg-[#0d101b] p-5 md:grid-cols-[230px_1fr] md:p-7"><div className="mx-auto grid size-48 place-items-center rounded-full" style={{ background: ring }}><div className="grid size-[145px] place-items-center rounded-full bg-[#0d101b] text-center"><div><p className="text-3xl font-semibold">{result.total}</p><p className="mt-1 text-xs text-slate-500">комментариев</p></div></div></div><div><h3 className="text-base font-semibold">Распределение тональности</h3><p className="mt-1 text-xs text-slate-500">Распределение комментариев по тональности</p><div className="mt-6 space-y-5">{tones.map(t => <div key={t.key}><div className="mb-2 flex justify-between text-sm"><span className="flex items-center gap-2 text-slate-300"><span className="size-2.5 rounded-full" style={{ background: t.color }} />{t.label}</span><span className="font-medium tabular-nums">{pct(result[t.key], result.total)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full" style={{ width: `${pct(result[t.key], result.total)}%`, background: t.color }} /></div></div>)}</div></div></div>
               <p className="mt-4 text-xs leading-6 text-slate-500">Автоматическая оценка тональности может ошибаться, особенно при сарказме и неоднозначном контексте.</p>
