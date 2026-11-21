@@ -1,29 +1,39 @@
 # SocialSentiment — Frontend
 
-Next.js 16 / React 19 / TypeScript / Tailwind CSS.
+Веб-интерфейс анализа комментариев Instagram. Next.js 16, React 19, TypeScript, Tailwind CSS.
 
-## Run
-```bash
+## Быстрый запуск
+Нужны Node.js и pnpm. Backend Java работает на http://localhost:4001.
+
+```sh
 pnpm install
 pnpm dev
 ```
-Open http://localhost:4000. The Java backend must be running on http://localhost:4001.
 
-Optional: set `NEXT_PUBLIC_API_URL` to override the backend URL.
+Откройте http://localhost:4000.
 
-## Features
-- Instagram post / Reel URL form
-- Optional manual import of real comments, one per line
-- Negative / neutral / positive breakdown and filters
-- Recent analyses from PostgreSQL via Java API
-- Honest `COLLECTOR_NOT_CONNECTED` state when no comments are available
+## Возможности
+- Анализ публикации Instagram через Scrapfly или ручной ввод комментариев
+- Статистика negative / neutral / positive
+- Поиск и фильтры комментариев
+- История анализов, повторный анализ
+- Плавная однострочная индикация загрузки (ориентировочная, не real-time статусы сервера)
 
-**Current limitation:** automatic Instagram collection is not connected. The current sentiment classifier is a dictionary heuristic, not an AI model.
+## Конфигурация
+`NEXT_PUBLIC_API_URL` — адрес Java API, по умолчанию `http://localhost:4001`.
+Пример в `.env.example`.
 
-Backend and coursework docs: https://github.com/RollSatrs/SocialSentiment-Backend
-
-## Checks
-```bash
+## Проверка
+```sh
 pnpm lint
 pnpm build
 ```
+
+## Git workflow
+Изменения отправляются из `feature/<name>` в `main` через Pull Request. Перед слиянием проверяйте CI и просматривайте diff.
+
+## Backend и документация
+[SocialSentiment-Backend](https://github.com/RollSatrs/SocialSentiment-Backend) — Java, PostgreSQL, Python parser и материалы к защите (User Stories, ER, API, Postman).
+
+## Ограничения
+Автоматический сбор зависит от внешнего сервиса и может быть недоступен; Python sentiment model должна быть запущена отдельно. Авторизации нет. Для защиты добавьте реальные скриншоты работающего UI, не подменяйте их макетами.

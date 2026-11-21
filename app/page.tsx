@@ -23,8 +23,6 @@ function LoadingMessage({ messages }: { messages: readonly string[] }) {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
   useEffect(() => {
-    setIndex(0);
-    setVisible(true);
     let current = 0;
     let transitionTimer: number | undefined;
     const interval = window.setInterval(() => {
@@ -73,7 +71,6 @@ export default function Home() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState("");
   const [historyError, setHistoryError] = useState("");
-  const [tab, setTab] = useState<"overview" | "comments">("overview");
 
   const refresh = useCallback(async () => {
     setHistoryLoading(true);
@@ -87,10 +84,13 @@ export default function Home() {
     } finally { setHistoryLoading(false); }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
   function addResult(data: Analysis) {
-    setResult(data); setFilter("all"); setQuery(""); setTab("overview"); setError("");
+    setResult(data); setFilter("all"); setQuery(""); setError("");
     setHistory(previous => [data, ...previous.filter(item => item.id !== data.id)].slice(0, 20));
   }
 
@@ -128,7 +128,6 @@ export default function Home() {
     (filter === "all" || x.sentiment === filter) && x.text.toLocaleLowerCase().includes(query.toLocaleLowerCase())
   ), [result, filter, query]);
   const negativeShare = result ? pct(result.negative, result.total) : 0;
-  const positiveShare = result ? pct(result.positive, result.total) : 0;
   const neutralShare = result ? pct(result.neutral, result.total) : 0;
   const ring = result?.total ? `conic-gradient(#fb7185 0% ${negativeShare}%, #94a3b8 ${negativeShare}% ${negativeShare + neutralShare}%, #34d399 ${negativeShare + neutralShare}% 100%)` : "#25283a";
 
