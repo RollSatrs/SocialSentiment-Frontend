@@ -25,14 +25,25 @@ function LoadingMessage({ messages }: { messages: readonly string[] }) {
   useEffect(() => {
     setIndex(0);
     setVisible(true);
+    let current = 0;
+    let transitionTimer: number | undefined;
     const interval = window.setInterval(() => {
+      if (current >= messages.length - 1) {
+        window.clearInterval(interval);
+        return;
+      }
       setVisible(false);
-      window.setTimeout(() => {
-        setIndex(previous => Math.min(previous + 1, messages.length - 1));
+      transitionTimer = window.setTimeout(() => {
+        current += 1;
+        setIndex(current);
         setVisible(true);
+        if (current >= messages.length - 1) window.clearInterval(interval);
       }, 850);
     }, 3500);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(transitionTimer);
+    };
   }, [messages]);
   return (
     <span className="relative block h-5 overflow-hidden text-center" role="status" aria-live="off">
